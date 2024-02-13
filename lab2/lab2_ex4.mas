@@ -1,0 +1,110 @@
+Clear
+Input
+Store       number
+JNS         tohex
+Halt        
+
+
+
+/ Functions
+tohex,      HEX     0
+            Jump    convert
+            JumpI   tohex
+            
+
+convert,    Load        number
+            Subt        sixteen
+            Skipcond    000
+            Jump        dev
+            Load        number
+            StoreI      result_indices
+            Load        result_top
+            Store       result_indices
+            Jump        print_result
+
+
+dev,        Load        number
+            Subt        sixteen
+            Skipcond    000
+            Jump        increment_quotient
+            / Storing the remainder to the result array
+            Load        number
+            StoreI      result_indices
+            Load        result_indices
+            Subt        one
+            Store       result_indices
+            Jump        reset_values  
+
+
+increment_quotient,     Store       number      / Updating number value (currently in AC)
+                        Load        quotient 	
+        		        Add 		one 
+                        Store       quotient
+                        Jump 		dev
+
+
+reset_values,       Load    quotient
+                    Store   number
+                    Clear
+                    Store   quotient
+                    Jump    convert
+
+
+print_result,       LoadI       result_indices
+                    Store       index
+                    Load        result_indices
+                    Add         one
+                    Store       result_indices
+                    Load        code
+                    Add         index
+                    Store       code
+                    LoadI       code
+                    Output  
+                    Load        code_top
+                    Store       code
+                    Load        result_size
+                    Subt        one
+                    Store       result_size
+                    Skipcond    400
+                    Jump        print_result
+                    JumpI       tohex
+
+
+
+
+/ Variables
+number,     DEC     0
+one,        DEC     1
+sixteen,    DEC     16
+quotient,   DEC     0
+code_top,   HEX     03D
+code,       HEX     03D
+            HEX     30      / 0
+            HEX     31      / 1
+            HEX     32      / 2
+            HEX     33      / 3
+            HEX     34      / 4
+            HEX     35      / 5
+            HEX     36      / 6
+            HEX     37      / 7
+            HEX     38      / 8
+            HEX     39      / 9
+            HEX     41      / A
+            HEX     42      / B
+            HEX     43      / C
+            HEX     44      / D
+            HEX     45      / E
+            HEX     46      / F
+
+/ result_array
+result_size,        DEC     5
+result_top,         HEX     050
+result_indices,     HEX     054
+                    DEC     0
+                    DEC     0
+                    DEC     0
+                    DEC     0
+                    DEC     0
+
+/ Variables for printing out the result
+index,      DEC     0

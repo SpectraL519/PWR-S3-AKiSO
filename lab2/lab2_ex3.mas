@@ -1,0 +1,47 @@
+/ Calculating X/Y
+
+Clear			/ Clear the AC
+Input 			/ Get X from input
+Store X
+Input			/ Get Y from input
+Store Y
+
+Load        X
+Skipcond    800
+Jump        print_zeros
+Load        Y
+Skipcond    800
+Jump        print_zeros
+
+loop,	Load 		X 			        / Load X to AC
+		Subt		Y			        / Subtract Y
+        Store       X                   / Updateing X
+        Skipcond	000			        / If NOT AC (X - Y) < 0 execute single_subt
+        Jump 		increment_quotient	/ Subtract Y from X once    
+
+Load 		quotient
+Output
+Load        Y
+Add         X
+Output
+Halt
+
+increment_quotient,     Load        quotient 	
+        		        Add 		one			
+        		        Store 		quotient
+                        Jump 		loop
+
+print_zeros,    Load    quotient
+                Output
+                Output
+                Halt
+
+
+
+/ Variables
+X,				DEC		0
+Y,				DEC		0
+quotient,		DEC		0
+
+/ Constant values
+one,			DEC		1
