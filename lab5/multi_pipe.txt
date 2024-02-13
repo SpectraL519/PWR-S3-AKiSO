@@ -1,0 +1,142 @@
+void execPipe (char **pipeArgs[], char *redirect[]) {
+    int n_pipe = 0;
+    while (pipeArgs[n_pipe++] != NULL) {}
+
+    // 0 - read end, 1 - write end
+    int pipefd[MAX_PIPE][2];
+    pid_t prev_pid, curr_pid;
+
+    if (pipe(pipefd[0]) < 0) {
+        perror("pipe");
+        return;
+    }
+
+    prev_pid = fork();
+
+    if (prev_pid < 0) {
+        perror("fork");
+        return;
+    }
+
+    if (prev_pid == 0) {
+        // Redirecting the output stream of the read end to the input stream of the write end
+        dup2(pipefd[0][1], STDOUT_FILENO);
+
+        // Redirecting std in stream
+        if (redirect[0] != NULL && redirect[1] != NULL) {
+            int file;
+            if (strcmp(redirect[0], "<") == 0) {
+                file = open(redirect[1], O_RDONLY);
+                dup2(file, STDIN_FILENO);
+                close(file);
+            }
+        }
+
+        close(pipefd[0][0]);
+        close(pipefd[0][1]);
+
+        if (execvp(pipeArgs[0][0], pipeArgs[0]) < 0) {
+            perror("execvp");
+            return;
+        }
+    } 
+
+    int prev_status;
+    waitpid(prev_pid, &prev_status, 0);
+    if (WIFEXITED(prev_status)) {
+        if (WEXITSTATUS(prev_status) != 0) {
+            fprintf(stderr, "lsh: child process exited with non-zero status\n");
+        }
+    }
+
+
+
+    for (int i = 1; i < n_pipe - 1; i++) {
+        if (pipe(pipefd[i]) < 0) {
+            close(pipefd[i][0]);
+            close(pipefd[i][1]);
+            perror("pipe");
+            return;
+        }
+
+        curr_pid = fork();
+
+        if (curr_pid < 0) {
+            perror("fork");
+            return;
+        }
+
+        if (curr_pid == 0) {
+            // Redirecting the output stream of the read end to the input stream of the write end
+            dup2(pipefd[i][1], STDOUT_FILENO);
+            close(pipefd[i][0]);
+            close(pipefd[i][1]);
+
+            if (execvp(pipeArgs[0][0], pipeArgs[0]) < 0) {
+                perror("execvp");
+                return;
+            }
+        } 
+
+        int curr_status;
+        waitpid(curr_pid, &curr_status, 0);
+        if (WIFEXITED(curr_status)) {
+            if (WEXITSTATUS(curr_status) != 0) {
+                fprintf(stderr, "lsh: child process exited with non-zero status\n");
+            }
+        }
+
+        prev_pid = curr_pid;
+    }
+
+
+
+    if (pipe(pipefd[n_pipe - 1]) < 0) {
+        perror("pipe");
+        return;
+    }
+
+    curr_pid = fork();
+    if (curr_pid < 0) {
+        perror("fork");
+        return;
+    }
+
+    if (curr_pid == 0) {
+        // Redirecting the output stream of the read end to the input stream of the write end
+        dup2(pipefd[n_pipe - 1][0], STDIN_FILENO);
+
+        // Redirecting std out, err streams
+        if (redirect[0] != NULL && redirect[1] != NULL) {
+            int file;
+            if (strcmp(redirect[0], ">") == 0) {
+                // 0777 - file permissions when creating the file (in octal)
+                file = open(redirect[1], O_WRONLY | O_APPEND | O_CREAT, 0777);
+                dup2(file, STDOUT_FILENO);
+                close(file);
+            }
+            else if (strcmp(redirect[0], "2>") == 0) {
+                // 0777 - file permissions when creating the file (in octal)
+                file = open(redirect[1], O_WRONLY | O_APPEND | O_CREAT, 0777);
+                dup2(file, STDERR_FILENO);
+                close(file);
+            }
+        }
+
+        close(pipefd[n_pipe - 1][0]);
+        close(pipefd[n_pipe - 1][1]);
+
+        if (execvp(pipeArgs[n_pipe - 1][0], pipeArgs[n_pipe - 1]) < 0) {
+            perror("execvp");
+            return;
+        }
+    } 
+
+    int curr_status;
+    waitpid(curr_pid, &curr_status, 0);
+    if (WIFEXITED(curr_status)) {
+        if (WEXITSTATUS(curr_status) != 0) {
+            fprintf(stderr, "lsh: child process exited with non-zero status\n");
+        }
+    }
+}
